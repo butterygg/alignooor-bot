@@ -121,7 +121,12 @@ async def join(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         if existing:
             await context.bot.send_message(
-                chat_id=user.id, text="✅ You're already in!"
+                chat_id=user.id,
+                text=(
+                    "✅ You're already in!\n"
+                    "Hit /kudo "
+                    "when you're ready to start sending Kudos."
+                ),
             )
         else:
             await context.bot.send_message(
