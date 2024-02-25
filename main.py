@@ -54,7 +54,7 @@ async def greet_new_users(update: Update, context: CallbackContext):
 🤗 Welcome to our newcomers\\!
 
 To register as an Alignooor and be eligible for rewards, \
-[send me a DM](https://t.me/{bot_username}?start) or hit Start\\.
+[send me a DM](https://t.me/{bot_username}?start)\\.
 
 Please read the pinned message to know more\\.
             """
@@ -63,9 +63,6 @@ Please read the pinned message to know more\\.
                 text=message,
                 parse_mode="MarkdownV2",
                 disable_web_page_preview=True,
-                reply_markup=InlineKeyboardMarkup(
-                    [[InlineKeyboardButton("Start", callback_data="/start")]]
-                ),
             )
             last_greeting_time = now
 
