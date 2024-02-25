@@ -163,7 +163,7 @@ async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     part_id = existing_part[0]["id"]
-    part_ID = existing_part[0]["fields"]["ID"]
+    part_ID = existing_part[0]["fields"]["ID"]  # pylint: disable=invalid-name
     today = get_today()
 
     try:
@@ -243,14 +243,27 @@ async def cancel_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def catch_all(update: Update, context: CallbackContext):
     user = update.effective_user
+    table = airtable_api.table(AIRTABLE_BASE_ID, AIRTABLE_DB_PART_ID)
+
+    try:
+        existing = table.all(formula=f"{{Telegram ID}}={user.id}")
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.exception(e)
+        await context.bot.send_message(
+            chat_id=user.id, text="🤦5️⃣ An unknown error occured, we're on it."
+        )
+        return
+
+    complement_text = (
+        "To send a Kudo, hit /kudo."
+        if existing
+        else "If you want to join as an Alignooor, hit /join."
+    )
 
     try:
         await context.bot.send_message(
             chat_id=user.id,
-            text=(
-                "🤷 Command not understood. If you haven't joined yet "
-                "and want to join as an Alignooor, send /join."
-            ),
+            text=("🤷 Command not understood. " + complement_text),
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("Join", callback_data="/join")]]
             ),
