@@ -58,7 +58,7 @@ async def greet_new_users(update: Update, context: CallbackContext):
     logger.info("greeting")
     global last_greeting_time  # pylint: disable=global-statement
     now = datetime.datetime.now()
-    if last_greeting_time is None or (now - last_greeting_time).total_seconds() > 3600:
+    if last_greeting_time is None or (now - last_greeting_time).total_seconds() > 600:
         bot_username = context.bot.username
         if update.message.new_chat_members:
             message = f"""
