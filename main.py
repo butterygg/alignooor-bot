@@ -116,7 +116,7 @@ async def join(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.exception(e)
         await context.bot.send_message(
-            chat_id=user.id, text="🤦 An unknown error occured, we're on it."
+            chat_id=user.id, text="🤦1️⃣ An unknown error occured, we're on it."
         )
     else:
         if existing:
@@ -140,7 +140,7 @@ async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.exception(e)
         await context.bot.send_message(
-            chat_id=user.id, text="🤦 An unknown error occured, we're on it."
+            chat_id=user.id, text="🤦2️⃣ An unknown error occured, we're on it."
         )
         return ConversationHandler.END
 
@@ -157,18 +157,19 @@ async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return ConversationHandler.END
 
-    part_id = existing_part[0]["fields"]["ID"]
+    part_id = existing_part[0]["id"]
+    part_ID = existing_part[0]["fields"]["ID"]
     today = get_today()
 
     try:
-        existing_kudos = kudo_table.all(formula=f"FIND({part_id},{{Participant}})")
+        existing_kudos = kudo_table.all(formula=f"FIND({part_ID},{{Participant}})")
         existing_kudos_today = [
             k for k in existing_kudos if k["fields"]["Date"] == today
         ]
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.exception(e)
         await context.bot.send_message(
-            chat_id=user.id, text="🤦 An unknown error occured, we're on it."
+            chat_id=user.id, text="🤦3️⃣ An unknown error occured, we're on it."
         )
         return ConversationHandler.END
 
@@ -217,7 +218,7 @@ async def unsafe_save_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.exception(e)
         await context.bot.send_message(
-            chat_id=user.id, text="🤦 An unknown error occured, we're on it."
+            chat_id=user.id, text="🤦4️⃣ An unknown error occured, we're on it."
         )
         return ConversationHandler.END
 
