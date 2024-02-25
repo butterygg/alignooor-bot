@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 async def greet_new_users(update: Update, context: CallbackContext):
+    logger.info("greeting")
     global last_greeting_time  # pylint: disable=global-statement
     now = datetime.datetime.now()
     if last_greeting_time is None or (now - last_greeting_time).total_seconds() > 3600:
@@ -70,12 +71,13 @@ Please read the pinned message to know more\\.
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"start {update.effective_user.name}")
     user = update.effective_user
     bot: Bot = context.bot
 
     if update.effective_chat.type != "private" and update.message:
         await update.message.reply_markdown_v2(
-            f"👋 Hi {context.bot.username}\\! "
+            f"👋 Hi {user.name}\\! "
             f"Let's continue our conversation [in DMs]"
             f"(https://t.me/{context.bot.username})\\."
         )
@@ -90,6 +92,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def join(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"join {update.effective_user.name}")
     user = update.effective_user
     table = airtable_api.table(AIRTABLE_BASE_ID, AIRTABLE_DB_PART_ID)
     fields = {
@@ -119,6 +122,7 @@ async def join(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"join {update.effective_user.name}")
     query = update.callback_query
 
     if query.data == "/start":
