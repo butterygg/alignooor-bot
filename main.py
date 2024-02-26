@@ -26,6 +26,7 @@ SAVE_KUDO = 0
 
 TG_BOT_TOK = os.environ["TG_BOT_TOK"]
 TG_BOT_UNAME = os.environ["TG_BOT_UNAME"]
+TG_GROUP_ID = os.environ["TG_GROUP_ID"]
 
 AIRTABLE_TOK = os.environ["AIRTABLE_TOK"]
 AIRTABLE_BASE_ID = os.environ["AIRTABLE_BASE_ID"]
@@ -35,7 +36,9 @@ AIRTABLE_DB_VOTE_ID = os.environ["AIRTABLE_DB_VOTE_ID"]
 airtable_api = Api(AIRTABLE_TOK)
 
 # Store the time of the last greeting
-last_greeting_time = None  # pylint: disable=invalid-name
+last_group_greeting_time = None  # pylint: disable=invalid-name
+last_participant_greeting_time = None  # pylint: disable=invalid-name
+last_kudo_greeting_time = None  # pylint: disable=invalid-name
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -56,15 +59,18 @@ def get_today() -> str:
 
 async def greet_new_users(update: Update, context: CallbackContext):
     logger.info("greeting")
-    global last_greeting_time  # pylint: disable=global-statement
+    global last_group_greeting_time  # pylint: disable=global-statement
     now = datetime.datetime.now()
-    if last_greeting_time is None or (now - last_greeting_time).total_seconds() > 600:
+    if (
+        last_group_greeting_time is None
+        or (now - last_group_greeting_time).total_seconds() > 600
+    ):
         bot_username = context.bot.username
         if update.message.new_chat_members:
             message = f"""
 🤗 Welcome to our newcomers\\!
 
-To register as an Alignooor and be eligible for rewards, \
+To register to the game and be eligible for rewards, \
 [send me a DM](https://t.me/{bot_username}?start)\\.
 
 Please read the pinned message to learn more\\.
@@ -75,7 +81,7 @@ Please read the pinned message to learn more\\.
                 parse_mode="MarkdownV2",
                 disable_web_page_preview=True,
             )
-            last_greeting_time = now
+            last_group_greeting_time = now
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -92,7 +98,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await bot.send_message(
         chat_id=user.id,
-        text=f"Hi {user.name}, ready to join the game? Just hit Join.",
+        text=f"Hi {user.name}, ready to join the game? Just hit /join.",
         reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("Join", callback_data="/join")]]
         ),
@@ -102,7 +108,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def join(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"join {update.effective_user.name}")
     user = update.effective_user
-    table = airtable_api.table(AIRTABLE_BASE_ID, AIRTABLE_DB_PART_ID)
+    part_table = airtable_api.table(AIRTABLE_BASE_ID, AIRTABLE_DB_PART_ID)
     fields = {
         "Telegram ID": user.id,
         "Telegram handle": user.username,
@@ -110,28 +116,44 @@ async def join(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     try:
-        existing = table.all(formula=f"{{Telegram ID}}={fields['Telegram ID']}")
+        existing = part_table.all(formula=f"{{Telegram ID}}={fields['Telegram ID']}")
         if not existing:
-            table.create(fields)
+            part_table.create(fields)
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.exception(e)
         await context.bot.send_message(
             chat_id=user.id, text="🤦1️⃣ An unknown error occurred, we're on it."
         )
-    else:
-        if existing:
-            await context.bot.send_message(
-                chat_id=user.id,
-                text=(
-                    "✅ You're already in!\n"
-                    "Hit /kudo "
-                    "when you're ready to start sending Kudos."
-                ),
-            )
-        else:
-            await context.bot.send_message(
-                chat_id=user.id, text="🎉 You're now registered as an Alignooor!"
-            )
+        return
+
+    if existing:
+        await context.bot.send_message(
+            chat_id=user.id,
+            text=(
+                "✅ You're already in!\n"
+                "Hit /kudo "
+                "when you're ready to start sending kudos."
+            ),
+        )
+        return
+
+    now = datetime.datetime.now()
+    global last_participant_greeting_time  # pylint: disable=global-statement
+
+    await context.bot.send_message(chat_id=user.id, text="🎉 You're now registered!")
+    if (
+        last_participant_greeting_time is None
+        or (now - last_participant_greeting_time).total_seconds() > 600
+    ):
+        number = part_table.all().count()  # [XXX]
+        await context.bot.send_message(
+            chat_id=TG_GROUP_ID,
+            text=(
+                "🙌 Some new participants have registered!\n"
+                f"You're now {number} participants."
+            ),
+        )
+        last_participant_greeting_time = now
 
 
 async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -232,6 +254,24 @@ async def unsafe_save_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text=(f"💌 Thank you for sending your appreciation to {name}!"),
     )
 
+    today = get_today()
+    now = datetime.datetime.now()
+    global last_kudo_greeting_time  # pylint: disable=global-statement
+
+    if (
+        last_kudo_greeting_time is None
+        or (now - last_kudo_greeting_time).total_seconds() > 600
+    ):
+        number = kudo_table.formula(f"{{Date}}={today}").count()  # [XXX]
+        await context.bot.send_message(
+            chat_id=TG_GROUP_ID,
+            text=(
+                "🫶 Some kudos were given!\n"
+                f"That's {number} signs of alignment given today."
+            ),
+        )
+        last_kudo_greeting_time = now
+
     return ConversationHandler.END
 
 
@@ -257,13 +297,13 @@ async def catch_all(update: Update, context: CallbackContext):
     complement_text = (
         "To send kudos, hit /kudo."
         if existing
-        else "If you want to join as an Alignooor, hit /join."
+        else "If you want to join the game, hit /join."
     )
 
     try:
         await context.bot.send_message(
             chat_id=user.id,
-            text=("🤷 Command not understood. " + complement_text),
+            text=("🤷 Command not understood.\n" + complement_text),
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("Join", callback_data="/join")]]
             ),
