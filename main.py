@@ -26,7 +26,7 @@ SAVE_KUDO = 0
 
 TG_BOT_TOK = os.environ["TG_BOT_TOK"]
 TG_BOT_UNAME = os.environ["TG_BOT_UNAME"]
-TG_GROUP_ID = os.environ["TG_GROUP_ID"]
+TG_GROUP_ID = -int(os.environ["TG_GROUP_ID"])
 
 AIRTABLE_TOK = os.environ["AIRTABLE_TOK"]
 AIRTABLE_BASE_ID = os.environ["AIRTABLE_BASE_ID"]
@@ -145,7 +145,7 @@ async def join(update: Update, context: ContextTypes.DEFAULT_TYPE):
         last_participant_greeting_time is None
         or (now - last_participant_greeting_time).total_seconds() > 600
     ):
-        number = part_table.all().count()  # [XXX]
+        number = len(part_table.all())
         await context.bot.send_message(
             chat_id=TG_GROUP_ID,
             text=(
@@ -262,7 +262,7 @@ async def unsafe_save_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         last_kudo_greeting_time is None
         or (now - last_kudo_greeting_time).total_seconds() > 600
     ):
-        number = kudo_table.formula(f"{{Date}}={today}").count()  # [XXX]
+        number = len([k for k in kudo_table.all() if k["fields"]["Date"] == today])
         await context.bot.send_message(
             chat_id=TG_GROUP_ID,
             text=(
