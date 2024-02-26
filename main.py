@@ -67,7 +67,7 @@ async def greet_new_users(update: Update, context: CallbackContext):
 To register as an Alignooor and be eligible for rewards, \
 [send me a DM](https://t.me/{bot_username}?start)\\.
 
-Please read the pinned message to know more\\.
+Please read the pinned message to learn more\\.
             """
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
@@ -86,13 +86,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type != "private" and update.message:
         await update.message.reply_markdown_v2(
             f"👋 Hi {user.name}\\! "
-            f"Let's continue our conversation [in DMs]"
+            f"Let's continue the conversation [in DMs]"
             f"(https://t.me/{context.bot.username})\\."
         )
 
     await bot.send_message(
         chat_id=user.id,
-        text=f"Hi {user.name}, ready to participate as an Alignooor? Just hit Join.",
+        text=f"Hi {user.name}, ready to join the game? Just hit Join.",
         reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("Join", callback_data="/join")]]
         ),
@@ -116,7 +116,7 @@ async def join(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.exception(e)
         await context.bot.send_message(
-            chat_id=user.id, text="🤦1️⃣ An unknown error occured, we're on it."
+            chat_id=user.id, text="🤦1️⃣ An unknown error occurred, we're on it."
         )
     else:
         if existing:
@@ -145,7 +145,7 @@ async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.exception(e)
         await context.bot.send_message(
-            chat_id=user.id, text="🤦2️⃣ An unknown error occured, we're on it."
+            chat_id=user.id, text="🤦2️⃣ An unknown error occurred, we're on it."
         )
         return ConversationHandler.END
 
@@ -174,7 +174,7 @@ async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.exception(e)
         await context.bot.send_message(
-            chat_id=user.id, text="🤦3️⃣ An unknown error occured, we're on it."
+            chat_id=user.id, text="🤦3️⃣ An unknown error occurred, we're on it."
         )
         return ConversationHandler.END
 
@@ -193,8 +193,8 @@ async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         chat_id=user.id,
         text=(
-            "Please write the Telegram handle of the person you'd like to send a kudo to."
-            "\nIf you don't want to send a kudo anymore, just send /cancel."
+            "Please write the Telegram handle of the person you'd like to send kudos to."
+            "\nIf you don't want to send kudos anymore, just send /cancel."
         ),
     )
     context.user_data["part_id"] = part_id
@@ -223,7 +223,7 @@ async def unsafe_save_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.exception(e)
         await context.bot.send_message(
-            chat_id=user.id, text="🤦4️⃣ An unknown error occured, we're on it."
+            chat_id=user.id, text="🤦4️⃣ An unknown error occurred, we're on it."
         )
         return ConversationHandler.END
 
@@ -250,12 +250,12 @@ async def catch_all(update: Update, context: CallbackContext):
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.exception(e)
         await context.bot.send_message(
-            chat_id=user.id, text="🤦5️⃣ An unknown error occured, we're on it."
+            chat_id=user.id, text="🤦5️⃣ An unknown error occurred, we're on it."
         )
         return
 
     complement_text = (
-        "To send a Kudo, hit /kudo."
+        "To send kudos, hit /kudo."
         if existing
         else "If you want to join as an Alignooor, hit /join."
     )
