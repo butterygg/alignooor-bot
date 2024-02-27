@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # pylint: disable=unused-argument
 # pylint: disable=logging-fstring-interpolation
+# pylint: disable=broad-exception-caught
 """
 Aligner Telegram Bot
 """
@@ -111,8 +112,8 @@ async def join(update: Update, context: ContextTypes.DEFAULT_TYPE):
         existing = part_table.all(formula=f"{{Telegram ID}}={fields['Telegram ID']}")
         if not existing:
             part_table.create(fields)
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.exception(e)
+    except Exception:
+        logger.exception(f"join-existing {update.effective_user.name}")
         await context.bot.send_message(
             chat_id=user.id, text="🤦1️⃣ An unknown error occurred, we're on it."
         )
@@ -157,8 +158,8 @@ async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         existing_part = part_table.all(formula=f"{{Telegram ID}}={user.id}")
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.exception(e)
+    except Exception:
+        logger.exception(f"start_kudo-existing_part {update.effective_user.name}")
         await context.bot.send_message(
             chat_id=user.id, text="🤦2️⃣ An unknown error occurred, we're on it."
         )
@@ -186,8 +187,8 @@ async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         existing_kudos_today = [
             k for k in existing_kudos if k["fields"]["Date"] == today
         ]
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.exception(e)
+    except Exception:
+        logger.exception(f"start_kudo-existing_kudos {update.effective_user.name}")
         await context.bot.send_message(
             chat_id=user.id, text="🤦3️⃣ An unknown error occurred, we're on it."
         )
@@ -236,8 +237,8 @@ async def unsafe_save_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         kudo_table.create(fields)
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.exception(e)
+    except Exception:
+        logger.exception(f"save_kudo-create {update.effective_user.name}")
         await context.bot.send_message(
             chat_id=user.id, text="🤦4️⃣ An unknown error occurred, we're on it."
         )
@@ -284,8 +285,8 @@ async def catch_all(update: Update, context: CallbackContext):
 
     try:
         existing = table.all(formula=f"{{Telegram ID}}={user.id}")
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.exception(e)
+    except Exception:
+        logger.exception(f"catch_all-existing {update.effective_user.name}")
         await context.bot.send_message(
             chat_id=user.id, text="🤦5️⃣ An unknown error occurred, we're on it."
         )
@@ -301,12 +302,9 @@ async def catch_all(update: Update, context: CallbackContext):
         await context.bot.send_message(
             chat_id=user.id,
             text=("🤷 Command not understood.\n" + complement_text),
-            reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton("Join", callback_data="/join")]]
-            ),
         )
     except Exception:  # pylint: disable=broad-exception-caught
-        logger.info(f"cancel_kudo-no_dm {update.effective_user.name}")
+        logger.info(f"catch_all-no_dm {update.effective_user.name}")
 
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -319,6 +317,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await join(update, context)
     if query.data == "/kudo":
         await join(start_kudo, context)
+
+
+async def log_all_updates(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user:
+        user_info = f"user {user.id} ({user.username})"
+    else:
+        user_info = "unknown user"
+    logging.info(f"Update from {user_info}: {update.to_dict()}")  #
 
 
 def main() -> None:
@@ -345,6 +352,8 @@ def main() -> None:
     tg_app.add_handler(CallbackQueryHandler(button_callback))
 
     tg_app.add_handler(MessageHandler(filters.TEXT | filters.COMMAND, catch_all))
+
+    tg_app.add_handler(MessageHandler(filters.ALL, log_all_updates), group=1)
 
     # Run the bot until the user presses Ctrl-C
     tg_app.run_polling(allowed_updates=Update.ALL_TYPES)
