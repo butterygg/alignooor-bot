@@ -36,9 +36,6 @@ AIRTABLE_DB_VOTE_ID = os.environ["AIRTABLE_DB_VOTE_ID"]
 
 airtable_api = Api(AIRTABLE_TOK)
 
-# Store the time of the last greeting
-last_participant_greeting_time = None  # pylint: disable=invalid-name
-last_kudo_greeting_time = None  # pylint: disable=invalid-name
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -129,25 +126,6 @@ async def join(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ),
         )
         return
-
-    now = datetime.datetime.now()
-    global last_participant_greeting_time  # pylint: disable=global-statement
-
-    await context.bot.send_message(chat_id=user.id, text="🎉 You're now registered!")
-    if (
-        last_participant_greeting_time is None
-        or (now - last_participant_greeting_time).total_seconds() > 600
-    ):
-        number = len(part_table.all())
-        await context.bot.send_message(
-            chat_id=TG_GROUP_ID,
-            message_thread_id=TG_THREAD_ID,
-            text=(
-                "🙌 Some new participants have registered!\n"
-                f"You're now {number} participants."
-            ),
-        )
-        last_participant_greeting_time = now
 
 
 async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -248,25 +226,6 @@ async def unsafe_save_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id=user.id,
         text=(f"💌 Thank you for sending your appreciation to {name}!"),
     )
-
-    today = get_today()
-    now = datetime.datetime.now()
-    global last_kudo_greeting_time  # pylint: disable=global-statement
-
-    if (
-        last_kudo_greeting_time is None
-        or (now - last_kudo_greeting_time).total_seconds() > 600
-    ):
-        number = len([k for k in kudo_table.all() if k["fields"]["Date"] == today])
-        await context.bot.send_message(
-            chat_id=TG_GROUP_ID,
-            message_thread_id=TG_THREAD_ID,
-            text=(
-                "🫶 Some kudos were given!\n"
-                f"That's {number} signs of alignment given today."
-            ),
-        )
-        last_kudo_greeting_time = now
 
     return ConversationHandler.END
 
