@@ -26,6 +26,7 @@ SAVE_KUDO = 0
 
 TG_BOT_TOK = os.environ["TG_BOT_TOK"]
 TG_GROUP_ID = -int(os.environ["TG_GROUP_ID"])
+TG_THREAD_ID = -int(os.environ["TG_THREAD_ID"])
 
 AIRTABLE_TOK = os.environ["AIRTABLE_TOK"]
 AIRTABLE_BASE_ID = os.environ["AIRTABLE_BASE_ID"]
@@ -35,7 +36,6 @@ AIRTABLE_DB_VOTE_ID = os.environ["AIRTABLE_DB_VOTE_ID"]
 airtable_api = Api(AIRTABLE_TOK)
 
 # Store the time of the last greeting
-last_group_greeting_time = None  # pylint: disable=invalid-name
 last_participant_greeting_time = None  # pylint: disable=invalid-name
 last_kudo_greeting_time = None  # pylint: disable=invalid-name
 
@@ -58,29 +58,22 @@ def get_today() -> str:
 
 async def greet_new_users(update: Update, context: CallbackContext):
     logger.info("greeting")
-    global last_group_greeting_time  # pylint: disable=global-statement
-    now = datetime.datetime.now()
-    if (
-        last_group_greeting_time is None
-        or (now - last_group_greeting_time).total_seconds() > 600
-    ):
-        bot_username = context.bot.username
-        if update.message.new_chat_members:
-            message = f"""
+    bot_username = context.bot.username
+    message = f"""
 🤗 Welcome to our newcomers\\!
 
 To register to the game and be eligible for rewards, \
 [send me a DM](https://t.me/{bot_username}?start)\\.
 
 Please read the pinned message to learn more\\.
-            """
-            await context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text=message,
-                parse_mode="MarkdownV2",
-                disable_web_page_preview=True,
-            )
-            last_group_greeting_time = now
+    """
+    await context.bot.send_message(
+        chat_id=TG_GROUP_ID,
+        message_thread_id=TG_THREAD_ID,
+        text=message,
+        parse_mode="MarkdownV2",
+        disable_web_page_preview=True,
+    )
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -147,6 +140,7 @@ async def join(update: Update, context: ContextTypes.DEFAULT_TYPE):
         number = len(part_table.all())
         await context.bot.send_message(
             chat_id=TG_GROUP_ID,
+            message_thread_id=TG_THREAD_ID,
             text=(
                 "🙌 Some new participants have registered!\n"
                 f"You're now {number} participants."
@@ -264,6 +258,7 @@ async def unsafe_save_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         number = len([k for k in kudo_table.all() if k["fields"]["Date"] == today])
         await context.bot.send_message(
             chat_id=TG_GROUP_ID,
+            message_thread_id=TG_THREAD_ID,
             text=(
                 "🫶 Some kudos were given!\n"
                 f"That's {number} signs of alignment given today."
@@ -327,6 +322,7 @@ def main() -> None:
     # Create the Application and pass it your bot's token.
     tg_app = Application.builder().token(TG_BOT_TOK).build()
 
+    tg_app.add_handler(CommandHandler("greet", greet_new_users))
     tg_app.add_handler(CommandHandler("start", start))
     tg_app.add_handler(CommandHandler("join", join))
     conv_handler = ConversationHandler(
@@ -344,10 +340,6 @@ def main() -> None:
     tg_app.add_handler(conv_handler)
 
     tg_app.add_handler(CallbackQueryHandler(button_callback))
-
-    tg_app.add_handler(
-        MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, greet_new_users)
-    )
 
     tg_app.add_handler(MessageHandler(filters.TEXT | filters.COMMAND, catch_all))
 
