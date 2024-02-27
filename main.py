@@ -267,6 +267,8 @@ class DmOrGroupThreadFilter(filters.BaseFilter):
 
     def check_update(self, update: Update):
         message = update.message
+        if message is None:
+            return False
         is_dm = message.chat.type == "private"
         is_target_group = message.chat_id == self.group_id
         if self.thread_id:
