@@ -237,35 +237,6 @@ async def cancel_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
-async def catch_all(update: Update, context: CallbackContext):
-    logger.info(f"catchall {update.effective_user.name}")
-    user = update.effective_user
-    table = airtable_api.table(AIRTABLE_BASE_ID, AIRTABLE_DB_PART_ID)
-
-    try:
-        existing = table.all(formula=f"{{Telegram ID}}={user.id}")
-    except Exception:
-        logger.exception(f"catch_all-existing {update.effective_user.name}")
-        await context.bot.send_message(
-            chat_id=user.id, text="🤦5️⃣ An unknown error occurred, we're on it."
-        )
-        return
-
-    complement_text = (
-        "To send kudos, hit /kudo."
-        if existing
-        else "If you want to join the game, hit /join."
-    )
-
-    try:
-        await context.bot.send_message(
-            chat_id=user.id,
-            text=("🤷 Command not understood.\n" + complement_text),
-        )
-    except Exception:  # pylint: disable=broad-exception-caught
-        logger.info(f"catch_all-no_dm {update.effective_user.name}")
-
-
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"join {update.effective_user.name}")
     query = update.callback_query
@@ -309,8 +280,6 @@ def main() -> None:
     tg_app.add_handler(conv_handler)
 
     tg_app.add_handler(CallbackQueryHandler(button_callback))
-
-    tg_app.add_handler(MessageHandler(filters.TEXT | filters.COMMAND, catch_all))
 
     tg_app.add_handler(MessageHandler(filters.ALL, log_all_updates), group=1)
 
