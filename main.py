@@ -265,9 +265,6 @@ async def catch_all(update: Update, context: CallbackContext):
         await context.bot.send_message(
             chat_id=user.id,
             text=("🤷 Command not understood.\n" + complement_text),
-            reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton("Join", callback_data="/join")]]
-            ),
         )
     except Exception:  # pylint: disable=broad-exception-caught
         logger.info(f"cancel_kudo-no_dm {update.effective_user.name}")
