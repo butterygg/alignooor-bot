@@ -26,7 +26,7 @@ SAVE_KUDO = 0
 
 TG_BOT_TOK = os.environ["TG_BOT_TOK"]
 TG_GROUP_ID = -int(os.environ["TG_GROUP_ID"])
-TG_THREAD_ID = -int(os.environ["TG_THREAD_ID"])
+TG_THREAD_ID = int(os.environ["TG_THREAD_ID"])
 
 AIRTABLE_TOK = os.environ["AIRTABLE_TOK"]
 AIRTABLE_BASE_ID = os.environ["AIRTABLE_BASE_ID"]
