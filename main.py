@@ -218,6 +218,7 @@ async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def unsafe_save_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"save_kudo {update.effective_user.name}")
     name = update.message.text
     user = update.effective_user
     kudo_table = airtable_api.table(AIRTABLE_BASE_ID, AIRTABLE_DB_VOTE_ID)
@@ -270,12 +271,14 @@ async def unsafe_save_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def cancel_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"cancel_kudo {update.effective_user.name}")
     user = update.effective_user
     await context.bot.send_message(chat_id=user.id, text="Kudo operation canceled.")
     return ConversationHandler.END
 
 
 async def catch_all(update: Update, context: CallbackContext):
+    logger.info(f"catchall {update.effective_user.name}")
     user = update.effective_user
     table = airtable_api.table(AIRTABLE_BASE_ID, AIRTABLE_DB_PART_ID)
 
@@ -302,8 +305,8 @@ async def catch_all(update: Update, context: CallbackContext):
                 [[InlineKeyboardButton("Join", callback_data="/join")]]
             ),
         )
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.exception(e)
+    except Exception:  # pylint: disable=broad-exception-caught
+        logger.info(f"cancel_kudo-no_dm {update.effective_user.name}")
 
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
