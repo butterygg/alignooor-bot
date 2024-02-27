@@ -2,6 +2,7 @@
 # pylint: disable=unused-argument
 # pylint: disable=logging-fstring-interpolation
 # pylint: disable=broad-exception-caught
+# pylint: disable=missing-class-docstring
 """
 Aligner Telegram Bot
 """
@@ -258,30 +259,50 @@ async def log_all_updates(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info(f"Update from {user_info}: {update.to_dict()}")  #
 
 
+class DmOrGroupThreadFilter(filters.BaseFilter):
+    def __init__(self, group_id, thread_id=None):
+        self.group_id = group_id
+        self.thread_id = thread_id
+        super().__init__(name=None, data_filter=False)
+
+    def check_update(self, update: Update):
+        message = update.message
+        is_dm = message.chat.type == "private"
+        is_target_group = message.chat_id == self.group_id
+        if self.thread_id:
+            is_target_thread = message.message_thread_id == self.thread_id
+            return is_dm or (is_target_group and is_target_thread)
+        return is_dm or is_target_group
+
+
 def main() -> None:
     # Create the Application and pass it your bot's token.
     tg_app = Application.builder().token(TG_BOT_TOK).build()
 
-    tg_app.add_handler(CommandHandler("greet", greet_new_users))
-    tg_app.add_handler(CommandHandler("start", start))
-    tg_app.add_handler(CommandHandler("join", join))
+    msg_filter = DmOrGroupThreadFilter(group_id=TG_GROUP_ID, thread_id=TG_THREAD_ID)
+
+    tg_app.add_handler(CommandHandler("greet", greet_new_users, filters=msg_filter))
+    tg_app.add_handler(CommandHandler("start", start, filters=msg_filter))
+    tg_app.add_handler(CommandHandler("join", join, filters=msg_filter))
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("kudo", start_kudo)],
+        entry_points=[CommandHandler("kudo", start_kudo, filters=msg_filter)],
         states={
             SAVE_KUDO: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, unsafe_save_kudo)
+                MessageHandler(
+                    msg_filter & filters.TEXT & ~filters.COMMAND, unsafe_save_kudo
+                )
             ]
         },
         fallbacks=[
-            CommandHandler("cancel", cancel_kudo),
-            MessageHandler(filters.COMMAND, lambda update, context: None),
+            CommandHandler("cancel", cancel_kudo, filters=msg_filter),
+            MessageHandler(msg_filter & filters.COMMAND, lambda update, context: None),
         ],
     )
     tg_app.add_handler(conv_handler)
 
     tg_app.add_handler(CallbackQueryHandler(button_callback))
 
-    tg_app.add_handler(MessageHandler(filters.ALL, log_all_updates), group=1)
+    tg_app.add_handler(MessageHandler(msg_filter, log_all_updates), group=1)
 
     # Run the bot until the user presses Ctrl-C
     tg_app.run_polling(allowed_updates=Update.ALL_TYPES)
