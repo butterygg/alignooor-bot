@@ -188,8 +188,8 @@ async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         chat_id=user.id,
         text=(
-            "Please write the Telegram handle of the person you'd like to send kudos to."
-            "\nIf you don't want to send kudos anymore, just send /cancel."
+            "Please write the Telegram handle of the person you'd like to give a kudo to."
+            "\nIf you don't want to give kudos anymore, just send /cancel."
         ),
     )
     context.user_data["part_id"] = part_id
@@ -225,7 +225,7 @@ async def unsafe_save_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=user.id,
-        text=(f"💌 Thank you for sending your appreciation to {name}!"),
+        text=f"💌 Thank you for resgistering your appreciation to {name}!",
     )
 
     return ConversationHandler.END
@@ -332,7 +332,7 @@ def main() -> None:
         },
         fallbacks=[
             CommandHandler("cancel", cancel_kudo, filters=msg_filter),
-            MessageHandler(msg_filter & filters.COMMAND, lambda update, context: None),
+            MessageHandler(msg_filter & filters.COMMAND, unsafe_save_kudo),
         ],
     )
     tg_app.add_handler(conv_handler)
