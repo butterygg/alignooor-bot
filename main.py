@@ -29,6 +29,7 @@ SAVE_KUDO = 0
 TG_BOT_TOK = os.environ["TG_BOT_TOK"]
 TG_GROUP_ID = -int(os.environ["TG_GROUP_ID"])
 TG_THREAD_ID = int(os.environ["TG_THREAD_ID"])
+TG_THREAD2_ID = int(os.environ["TG_THREAD2_ID"])
 
 AIRTABLE_TOK = os.environ["AIRTABLE_TOK"]
 AIRTABLE_BASE_ID = os.environ["AIRTABLE_BASE_ID"]
@@ -158,43 +159,71 @@ async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     part_id = existing_part[0]["id"]
-    part_ID = existing_part[0]["fields"]["ID"]  # pylint: disable=invalid-name
     today = get_today()
 
-    try:
-        existing_kudos = kudo_table.all(formula=f"FIND({part_ID},{{Participant}})")
-        existing_kudos_today = [
-            k for k in existing_kudos if k["fields"]["Date"] == today
-        ]
-    except Exception:
-        logger.exception(f"start_kudo-existing_kudos {update.effective_user.name}")
-        await context.bot.send_message(
-            chat_id=user.id, text="🤦3️⃣ An unknown error occurred, we're on it."
-        )
-        return ConversationHandler.END
+    # part_ID = existing_part[0]["fields"]["ID"]  # pylint: disable=invalid-name
+    #     try:
+    #         existing_kudos = kudo_table.all(formula=f"FIND({part_ID},{{Participant}})")
+    #         existing_kudos_today = [
+    #             k for k in existing_kudos if k["fields"]["Date"] == today
+    #         ]
+    #     except Exception:
+    #         logger.exception(f"start_kudo-existing_kudos {update.effective_user.name}")
+    #         await context.bot.send_message(
+    #             chat_id=user.id, text="🤦3️⃣ An unknown error occurred, we're on it."
+    #         )
+    #         return ConversationHandler.END
+    #
+    #     if len(existing_kudos_today) >= 3:
+    #         names = [k["fields"]["Kudoee Telegram handle"] for k in existing_kudos_today]
+    #         # [TODO] Add a reset procedure but this needs to be tied to a date.
+    #         await context.bot.send_message(
+    #             chat_id=user.id,
+    #             text=(
+    #                 f"💗 You already gave your 3 kudos today, to {', '.join(names)}.\n"
+    #                 "🙏 Please get in touch with the team to reset your Kudos for today."
+    #             ),
+    #         )
+    #         return ConversationHandler.END
 
-    if len(existing_kudos_today) >= 3:
-        names = [k["fields"]["Kudoee Telegram handle"] for k in existing_kudos_today]
-        # [TODO] Add a reset procedure but this needs to be tied to a date.
+    if not context.args:
         await context.bot.send_message(
             chat_id=user.id,
             text=(
-                f"💗 You already gave your 3 kudos today, to {', '.join(names)}.\n"
-                "🙏 Please get in touch with the team to reset your Kudos for today."
+                "Please write the Telegram handle of the person you'd like to give a kudo to."
+                "\nIf you don't want to give kudos anymore, just send /cancel."
             ),
+        )
+        context.user_data["part_id"] = part_id
+        context.user_data["day"] = today
+        return SAVE_KUDO
+
+    kudoee_name = context.args[0]
+
+    kudo_fields = {
+        "Participant": [part_id],
+        "Kudoee Telegram handle": kudoee_name,
+        "Date": today,
+    }
+
+    try:
+        kudo_table.create(kudo_fields)
+    except Exception:
+        logger.exception(f"save_kudo-create {update.effective_user.name}")
+        await context.bot.send_message(
+            chat_id=user.id, text="🤦4️⃣ An unknown error occurred, we're on it."
         )
         return ConversationHandler.END
 
-    await context.bot.send_message(
-        chat_id=user.id,
-        text=(
-            "Please write the Telegram handle of the person you'd like to give a kudo to."
-            "\nIf you don't want to give kudos anymore, just send /cancel."
-        ),
-    )
-    context.user_data["part_id"] = part_id
-    context.user_data["day"] = today
-    return SAVE_KUDO
+    try:
+        await context.bot.send_message(
+            chat_id=user.id,
+            text=f"💌 Thank you for resgistering your appreciation to {kudoee_name}!",
+        )
+    except Exception:
+        logger.info(f"kudo_argument-dm_fail {update.effective_user.name}")
+
+    return ConversationHandler.END
 
 
 async def unsafe_save_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -236,6 +265,70 @@ async def cancel_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     await context.bot.send_message(chat_id=user.id, text="Kudo operation canceled.")
     return ConversationHandler.END
+
+
+async def send_zucash(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"send_zucash {update.effective_user.name} {context.args}")
+
+    if not context.args:
+        return
+
+    name = context.args[0]
+    user = update.effective_user
+    today = get_today()
+    part_table = airtable_api.table(AIRTABLE_BASE_ID, AIRTABLE_DB_PART_ID)
+    kudo_table = airtable_api.table(AIRTABLE_BASE_ID, AIRTABLE_DB_VOTE_ID)
+
+    part_fields = {
+        "Telegram ID": user.id,
+        "Telegram handle": user.username,
+        "Telegram name": user.full_name,
+    }
+
+    try:
+        existing_part = part_table.all(
+            formula=f"{{Telegram ID}}={part_fields['Telegram ID']}"
+        )
+    except Exception:
+        logger.exception(f"send_zucash-existing_part {update.effective_user.name}")
+        return
+
+    if not existing_part:
+        try:
+            part_table.create(part_fields)
+        except Exception:
+            logger.exception(f"send_zucash-create_part {update.effective_user.name}")
+            return
+
+        try:
+            existing_part = part_table.all(
+                formula=f"{{Telegram ID}}={part_fields['Telegram ID']}"
+            )
+        except Exception:
+            logger.exception(f"send_zucash-existing_part2 {update.effective_user.name}")
+            return
+
+    part_id = existing_part[0]["id"]
+    kudo_fields = {
+        "Participant": [part_id],
+        "Kudoee Telegram handle": name,
+        "Date": today,
+        "Zucash": True,
+    }
+
+    try:
+        kudo_table.create(kudo_fields)
+    except Exception:
+        logger.exception(f"send_zucash-create {update.effective_user.name}")
+        return
+
+    try:
+        await context.bot.send_message(
+            chat_id=user.id,
+            text=f"💌 Thank you for resgistering your appreciation to {name}!",
+        )
+    except Exception:
+        logger.info(f"send_zucash-no_dm {user.name}")
 
 
 async def catch_all(update: Update, context: CallbackContext):
@@ -292,9 +385,12 @@ async def log_all_updates(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 class DmOrGroupThreadFilter(filters.BaseFilter):
-    def __init__(self, group_id, thread_id=None):
+    def __init__(self, group_id, thread_ids=None):
         self.group_id = group_id
-        self.thread_id = thread_id
+        if thread_ids:
+            self.thread_ids = thread_ids
+        else:
+            self.thread_ids = []
         super().__init__(name=None, data_filter=False)
 
     def check_update(self, update: Update):
@@ -303,8 +399,8 @@ class DmOrGroupThreadFilter(filters.BaseFilter):
             return False
         is_dm = message.chat.type == "private"
         is_target_group = message.chat_id == self.group_id
-        if self.thread_id:
-            is_target_thread = message.message_thread_id == self.thread_id
+        if self.thread_ids:
+            is_target_thread = message.message_thread_id in self.thread_ids
             return is_dm or (is_target_group and is_target_thread)
         return is_dm or is_target_group
 
@@ -313,26 +409,30 @@ def main() -> None:
     # Create the Application and pass it your bot's token.
     tg_app = Application.builder().token(TG_BOT_TOK).build()
 
-    msg_filter = DmOrGroupThreadFilter(group_id=TG_GROUP_ID, thread_id=TG_THREAD_ID)
+    msg_filter = DmOrGroupThreadFilter(
+        group_id=TG_GROUP_ID, thread_ids=[TG_THREAD_ID, TG_THREAD2_ID]
+    )
 
     tg_app.add_handler(CommandHandler("greet", greet_new_users, filters=msg_filter))
     tg_app.add_handler(CommandHandler("start", start, filters=msg_filter))
     tg_app.add_handler(CommandHandler("join", join, filters=msg_filter))
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("kudo", start_kudo, filters=msg_filter)],
-        states={
-            SAVE_KUDO: [
-                MessageHandler(
-                    msg_filter & filters.TEXT & ~filters.COMMAND, unsafe_save_kudo
-                )
-            ]
-        },
-        fallbacks=[
-            CommandHandler("cancel", cancel_kudo, filters=msg_filter),
-            MessageHandler(msg_filter & filters.COMMAND, unsafe_save_kudo),
-        ],
+    tg_app.add_handler(
+        ConversationHandler(
+            entry_points=[CommandHandler("kudo", start_kudo, filters=msg_filter)],
+            states={
+                SAVE_KUDO: [
+                    MessageHandler(
+                        msg_filter & filters.TEXT & ~filters.COMMAND, unsafe_save_kudo
+                    )
+                ]
+            },
+            fallbacks=[
+                CommandHandler("cancel", cancel_kudo, filters=msg_filter),
+                MessageHandler(msg_filter & filters.COMMAND, unsafe_save_kudo),
+            ],
+        )
     )
-    tg_app.add_handler(conv_handler)
+    tg_app.add_handler(CommandHandler("send_zucash", send_zucash, filters=msg_filter))
 
     tg_app.add_handler(CallbackQueryHandler(button_callback))
 
