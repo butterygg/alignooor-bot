@@ -218,7 +218,7 @@ async def start_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await context.bot.send_message(
             chat_id=user.id,
-            text=f"💌 Thank you for resgistering your appreciation to {kudoee_name}!",
+            text=f"💌 Thank you for registering your appreciation to {kudoee_name}!",
         )
     except Exception:
         logger.info(f"kudo_argument-dm_fail {update.effective_user.name}")
@@ -254,7 +254,7 @@ async def unsafe_save_kudo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=user.id,
-        text=f"💌 Thank you for resgistering your appreciation to {name}!",
+        text=f"💌 Thank you for registering your appreciation to {name}!",
     )
 
     return ConversationHandler.END
@@ -325,7 +325,7 @@ async def send_zucash(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await context.bot.send_message(
             chat_id=user.id,
-            text=f"💌 Thank you for resgistering your appreciation to {name}!",
+            text=f"💌 Thank you for registering your appreciation to {name}!",
         )
     except Exception:
         logger.info(f"send_zucash-no_dm {user.name}")
